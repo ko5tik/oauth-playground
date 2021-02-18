@@ -105,16 +105,69 @@ func newSession(user string) *openid.DefaultSession {
 	}
 }
 
-func introspectionEndpoint(writer http.ResponseWriter, request *http.Request) {
+// introspection endpoint is called by  resource provider to  retrieve  information what is client allowed to do.
+func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
+	log.Println("introspectionEndpoint called")
+	ctx := req.Context()
+	mySessionData := newSession("")
+	ir, err := oauth2.NewIntrospectionRequest(ctx, req, mySessionData)
+	if err != nil {
+		log.Printf("Error occurred in NewIntrospectionRequest: %+v", err)
+		oauth2.WriteIntrospectionError(rw, err)
+		return
+	}
 
+	oauth2.WriteIntrospectionResponse(rw, ir)
 }
 
 func revokeEndpoint(writer http.ResponseWriter, request *http.Request) {
 
 }
 
-func tokenEndpoint(writer http.ResponseWriter, request *http.Request) {
+func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
+	log.Println("tokenEndpoint called")
 
+	// This context will be passed to all methods.
+	ctx := req.Context()
+
+	// Create an empty session object which will be passed to the request handlers
+	mySessionData := newSession("")
+
+	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
+	accessRequest, err := oauth2.NewAccessRequest(ctx, req, mySessionData)
+
+	// Catch any errors, e.g.:
+	// * unknown client
+	// * invalid redirect
+	// * ...
+	if err != nil {
+		log.Printf("Error occurred in NewAccessRequest: %+v", err)
+		oauth2.WriteAccessError(rw, accessRequest, err)
+		return
+	}
+
+	// If this is a client_credentials grant, grant all requested scopes
+	// NewAccessRequest validated that all requested scopes the client is allowed to perform
+	// based on configured scope matching strategy.
+	if accessRequest.GetGrantTypes().ExactOne("client_credentials") {
+		for _, scope := range accessRequest.GetRequestedScopes() {
+			accessRequest.GrantScope(scope)
+		}
+	}
+
+	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
+	// and aggregate the result in response.
+	response, err := oauth2.NewAccessResponse(ctx, accessRequest)
+	if err != nil {
+		log.Printf("Error occurred in NewAccessResponse: %+v", err)
+		oauth2.WriteAccessError(rw, accessRequest, err)
+		return
+	}
+
+	// All done, send the response.
+	oauth2.WriteAccessResponse(rw, accessRequest, response)
+
+	// The client now has a valid access token
 }
 
 // auth endpoint receives basic authentication data ( in request body, not URL! )
@@ -191,4 +244,5 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// Last but not least, send the response!
 	oauth2.WriteAuthorizeResponse(rw, ar, response)
 
+	// response with authorisation token sent, this token will be exchanged for access tokel later
 }
