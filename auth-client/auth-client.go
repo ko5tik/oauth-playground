@@ -59,8 +59,35 @@ func main() {
 	// Location is important, this URL contains "code" parameter
 	// which can be exchanged for token later in separate  request to token endpoint
 	location, err := res.Location()
+	if err != nil {
+		log.Fatal("no location was returned")
+	}
 	fmt.Printf("Location:\t%s\n", location)
-	header := res.Header
+
+	// now we have location,   extract code
+	code := location.Query().Get("code")
+	fmt.Printf("extracted code: %s\n", code)
+
+	//  exchange code for token
+	tokenValues := url.Values{
+		"code": {code},
+		//
+		"grant_type": {"authorization_code"},
+		//  identifies client app
+		"client_id":     {"my-client"},
+		"client_secret": {"foobar"},
+	}
+
+	fmt.Printf("----------- retrieve token --------------\n")
+	tokenRequest, _ := http.NewRequest(http.MethodPost, "http://localhost:3846/oauth2/token", strings.NewReader(tokenValues.Encode()))
+	tokenRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	tokenResponse, err := client.Do(tokenRequest)
+	if err != nil {
+		log.Fatal("token responce failed\n", err)
+	}
+
+	header := tokenResponse.Header
 	fmt.Printf("----------- header ------------\n")
 	for key, value := range header {
 		buf := bytes.Buffer{}
@@ -72,7 +99,7 @@ func main() {
 	}
 
 	fmt.Printf("----------- body ------------\n")
-	data, _ := ioutil.ReadAll(res.Body)
+	data, _ := ioutil.ReadAll(tokenResponse.Body)
 	fmt.Printf(string(data))
 
 }
