@@ -30,17 +30,36 @@ func main() {
 		//  scopes supplied by user
 		"scopes": {"photos openid offline"},
 
-		//  callback url
-		"redirect-url": {"callback:"},
+		//  callback url -  proper ne has to be configured on server
+		// and match the one we are sending.
+		//		"redirect_uri": {"callback://callback.url"},
 	}
 
-	// request goes agains auth server
-	res, err := http.Post("http://localhost:3846/oauth2/auth", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	//  create custom https client, one that does not do automatic redirects
+	// we cal also add TLS here - and we shall do it later
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, "http://localhost:3846/oauth2/auth", strings.NewReader(form.Encode()))
+	//important, so values are encoded properly
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	// and call
+	res, err := client.Do(request)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	fmt.Printf("----------- response ------------\n")
+	fmt.Printf("Status:\t%s\n", res.Status)
+	// Location is important, this URL contains "code" parameter
+	// which can be exchanged for token later in separate  request to token endpoint
+	location, err := res.Location()
+	fmt.Printf("Location:\t%s\n", location)
 	header := res.Header
 	fmt.Printf("----------- header ------------\n")
 	for key, value := range header {
