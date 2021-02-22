@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,6 +9,17 @@ import (
 	"net/url"
 	"strings"
 )
+
+const AuthUrl = "http://localhost:3846/oauth2/auth"
+const TokenUrl = "http://localhost:3846/oauth2/token"
+const IntrospectUrl = "http://localhost:3846/oauth2/introspect"
+
+type Token struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	Scope       string `json:"scope"`
+	TokenType   string `json:"token_type"`
+}
 
 func main() {
 
@@ -43,7 +54,7 @@ func main() {
 		},
 	}
 
-	request, _ := http.NewRequest(http.MethodPost, "http://localhost:3846/oauth2/auth", strings.NewReader(form.Encode()))
+	request, _ := http.NewRequest(http.MethodPost, AuthUrl, strings.NewReader(form.Encode()))
 	//important, so values are encoded properly
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
@@ -79,27 +90,43 @@ func main() {
 	}
 
 	fmt.Printf("----------- retrieve token --------------\n")
-	tokenRequest, _ := http.NewRequest(http.MethodPost, "http://localhost:3846/oauth2/token", strings.NewReader(tokenValues.Encode()))
+
+	tokenRequest, _ := http.NewRequest(http.MethodPost, TokenUrl, strings.NewReader(tokenValues.Encode()))
 	tokenRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 	tokenResponse, err := client.Do(tokenRequest)
 	if err != nil {
-		log.Fatal("token responce failed\n", err)
+		log.Fatal("token response failed\n", err)
 	}
 
-	header := tokenResponse.Header
-	fmt.Printf("----------- header ------------\n")
-	for key, value := range header {
-		buf := bytes.Buffer{}
+	// token response contained in body as JSON,   parse it
+	token := Token{}
 
-		for _, v := range value {
-			buf.WriteString(v)
-		}
-		fmt.Printf("%s : %s\n", key, buf.String())
+	json.NewDecoder(tokenResponse.Body).Decode(&token)
+
+	fmt.Printf("token: %s\n", token.AccessToken)
+	fmt.Printf("expires: %d\n", token.ExpiresIn)
+	fmt.Printf("scope: %s\n", token.Scope)
+	fmt.Printf("type: %s\n", token.TokenType)
+
+	//  and also perform introspect in this token,  as if we were a genuine client
+	introspectValues := url.Values{
+		"token": {token.AccessToken},
+	}
+	introspectRequest, _ := http.NewRequest(http.MethodPost, IntrospectUrl, strings.NewReader(introspectValues.Encode()))
+	introspectRequest.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	introspectRequest.SetBasicAuth("my-client", "foobar")
+
+	introspectResult, err := client.Do(introspectRequest)
+	if err != nil {
+		log.Fatal("introspection response failed\n", err)
 	}
 
-	fmt.Printf("----------- body ------------\n")
-	data, _ := ioutil.ReadAll(tokenResponse.Body)
+	fmt.Printf("-----------  introspection response ------------\n")
+	fmt.Printf("Status:\t%s\n", introspectResult.Status)
+
+	fmt.Printf("-----------  introspection body ------------\n")
+	data, _ := ioutil.ReadAll(introspectResult.Body)
 	fmt.Printf(string(data))
 
 }
