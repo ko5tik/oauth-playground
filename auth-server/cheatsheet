@@ -1,3 +1,9 @@
 Local image build:
 
 docker image build -t playground-auth-server .
+
+
+Run locally:
+
+docker run  -p 3846:3846  playground-auth-server
+
