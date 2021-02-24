@@ -78,7 +78,7 @@ var (
 // Build a fosite instance with all OAuth2 and OpenID Connect handlers enabled, plugging in our configurations as specified above.
 var oauth2 = compose.ComposeAllEnabled(config, store, secret, privateKey)
 
-// A session is passed from the `/auth` to the `/token` endpoint. You probably want to store data like: "Who made the request",
+// A session is passed from the `/auth` to the `/token` server. You probably want to store data like: "Who made the request",
 // "What organization does that person belong to" and so on.
 // For our use case, the session will meet the requirements imposed by JWT access tokens, HMAC access tokens and OpenID Connect
 // ID Tokens plus a custom field
@@ -105,7 +105,7 @@ func newSession(user string) *openid.DefaultSession {
 	}
 }
 
-// introspection endpoint is called by  resource provider to  retrieve  information what is client allowed to do.
+// introspection server is called by  resource provider to  retrieve  information what is client allowed to do.
 func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
 	log.Println("introspectionEndpoint called")
 	ctx := req.Context()
@@ -170,7 +170,7 @@ func tokenEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// The client now has a valid access token
 }
 
-// auth endpoint receives basic authentication data ( in request body, not URL! )
+// auth server receives basic authentication data ( in request body, not URL! )
 // and returns authorisation code if everything is OK  it is also responsible for returning
 // app specific redirect url  as callback into application.   this is configured  and tweaked in example store
 func authEndpoint(rw http.ResponseWriter, req *http.Request) {
