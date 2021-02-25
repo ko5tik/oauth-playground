@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 )
@@ -47,6 +48,9 @@ func main() {
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.SetBasicAuth("my-client", "foobar")
 
+	rd, _ := httputil.DumpRequest(request, true)
+	fmt.Println("-----------   request ------------")
+	fmt.Printf("%q\n", rd)
 	// and call
 	res, err := client.Do(request)
 
@@ -54,8 +58,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("----------- response ------------\n")
+	fmt.Println("----------- response ------------")
 	fmt.Printf("Status:\t%s\n", res.Status)
+
+	dump, _ := httputil.DumpResponse(res, true)
+
+	fmt.Printf("%q", dump)
+	fmt.Println("----------- token ------------")
 
 	var token = Token{}
 

@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"github.com/ory/fosite/compose"
+	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/storage"
+	"github.com/ory/fosite/token/jwt"
 	"time"
 )
 
@@ -60,4 +62,21 @@ var (
 )
 
 // Build a fosite instance with all OAuth2 and OpenID Connect handlers enabled, plugging in our configurations as specified above.
-var oauth2 = compose.ComposeAllEnabled(config, store, secret, privateKey)
+var fosite = compose.Compose(
+	config,
+	store,
+	&oauth2.DefaultJWTStrategy{
+		JWTStrategy: &jwt.RS256JWTStrategy{
+			PrivateKey: privateKey,
+		},
+		HMACSHAStrategy: nil,
+		Issuer:          "",
+		ScopeField:      0,
+	},
+
+	nil,
+
+	compose.OAuth2ClientCredentialsGrantFactory,
+)
+
+// compose.ComposeAllEnabled(config, store, secret, privateKey)

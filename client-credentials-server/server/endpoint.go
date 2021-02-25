@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/ory/fosite/handler/openid"
+	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/token/jwt"
 	"log"
 	"net/http"
@@ -15,18 +15,16 @@ func Register() {
 	http.HandleFunc("/oauth2/introspect", introspectionEndpoint)
 }
 
-func newSession(user string) *openid.DefaultSession {
-	return &openid.DefaultSession{
-		Claims: &jwt.IDTokenClaims{
-			Issuer:      "https://fosite.my-application.com",
-			Subject:     user,
-			Audience:    []string{"https://my-client.my-application.com"},
-			ExpiresAt:   time.Now().Add(time.Hour * 6),
-			IssuedAt:    time.Now(),
-			RequestedAt: time.Now(),
-			AuthTime:    time.Now(),
+func newSession(user string) *oauth2.JWTSession {
+	return &oauth2.JWTSession{
+		JWTClaims: &jwt.JWTClaims{
+			Issuer:    "https://fosite.my-application.com",
+			Subject:   user,
+			Audience:  []string{"https://my-client.my-application.com"},
+			ExpiresAt: time.Now().Add(time.Hour * 6),
+			IssuedAt:  time.Now(),
 		},
-		Headers: &jwt.Headers{
+		JWTHeader: &jwt.Headers{
 			Extra: make(map[string]interface{}),
 		},
 	}
@@ -61,7 +59,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	mySessionData := newSession("")
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
-	accessRequest, err := oauth2.NewAccessRequest(ctx, req, mySessionData)
+	accessRequest, err := fosite.NewAccessRequest(ctx, req, mySessionData)
 
 	// Catch any errors, e.g.:
 	// * unknown client
@@ -69,7 +67,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// * ...
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %+v", err)
-		oauth2.WriteAccessError(rw, accessRequest, err)
+		fosite.WriteAccessError(rw, accessRequest, err)
 		return
 	}
 
@@ -84,15 +82,15 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
 	// and aggregate the result in response.
-	response, err := oauth2.NewAccessResponse(ctx, accessRequest)
+	response, err := fosite.NewAccessResponse(ctx, accessRequest)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessResponse: %+v", err)
-		oauth2.WriteAccessError(rw, accessRequest, err)
+		fosite.WriteAccessError(rw, accessRequest, err)
 		return
 	}
 
 	// All done, send the response.
-	oauth2.WriteAccessResponse(rw, accessRequest, response)
+	fosite.WriteAccessResponse(rw, accessRequest, response)
 
 }
 
@@ -100,12 +98,12 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	mySessionData := newSession("")
-	ir, err := oauth2.NewIntrospectionRequest(ctx, req, mySessionData)
+	ir, err := fosite.NewIntrospectionRequest(ctx, req, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewIntrospectionRequest: %+v", err)
-		oauth2.WriteIntrospectionError(rw, err)
+		fosite.WriteIntrospectionError(rw, err)
 		return
 	}
 
-	oauth2.WriteIntrospectionResponse(rw, ir)
+	fosite.WriteIntrospectionResponse(rw, ir)
 }
