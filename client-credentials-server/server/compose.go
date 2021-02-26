@@ -78,5 +78,3 @@ var fosite = compose.Compose(
 
 	compose.OAuth2ClientCredentialsGrantFactory,
 )
-
-// compose.ComposeAllEnabled(config, store, secret, privateKey)

@@ -11,8 +11,6 @@ import (
 func Register() {
 	// handle authentication and return   token
 	http.HandleFunc("/client", authEndpoint)
-	// perform token introspection for clients
-	http.HandleFunc("/oauth2/introspect", introspectionEndpoint)
 }
 
 func newSession(user string) *oauth2.JWTSession {
