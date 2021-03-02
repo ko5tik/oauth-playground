@@ -1,5 +1,6 @@
-FROM golang:latest
-WORKDIR /src
-COPY . .
-RUN go build -o /client-credentials-server .
-ENTRYPOINT ["./client-credentials-server"]
+FROM golang:alpine
+RUN mkdir /app
+COPY . /app
+WORKDIR /app
+RUN go build -o client-credentials-server .
+CMD ["/app/client-credentials-server"]
