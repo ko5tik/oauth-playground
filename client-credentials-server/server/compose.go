@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/handler/oauth2"
 	"github.com/ory/fosite/storage"
@@ -26,46 +27,53 @@ var (
 		// ...
 	}
 
-	// This is the example storage that contains:
-	// * an OAuth2 Client with id "my-client" and secret "foobar" capable of all oauth2 and open id connect grant and response types.
-	// * a User for the resource owner password credentials grant type with username "peter" and password "secret".
-	//
-	// You will most likely replace this with your own logic once you set up a real world application.
-	store = storage.NewExampleStore()
-
-	// This secret is used to sign authorize codes, access and refresh tokens.
-	// It has to be 32-bytes long for HMAC signing. This requirement can be configured via `compose.Config` above.
-	// In order to generate secure keys, the best thing to do is use crypto/rand:
-	//
-	// ```
-	// package main
-	//
-	// import (
-	//	"crypto/rand"
-	//	"encoding/hex"
-	//	"fmt"
-	// )
-	//
-	// func main() {
-	//	var secret = make([]byte, 32)
-	//	_, err := rand.Read(secret)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	// }
-	// ```
-	//
-	// If you require this to key to be stable, for example, when running multiple fosite servers, you can generate the
-	// 32byte random key as above and push it out to a base64 encoded string.
-	// This can then be injected and decoded as the `var secret []byte` on server start.
+	store = createMemoryStore()
+	// not sure we need this in this configuration
 	secret = []byte("some-cool-secret-that-is-32bytes")
 
 	// privateKey is used to sign JWT tokens. The default strategy uses RS256 (RSA Signature with SHA-256)
-	privateKey, _ = readKey() //rsa.GenerateKey(rand.Reader, 2048)
+	//  corrersponding public key shall be used for token validation
+	privateKey, _ = readKey()
 )
 
+// create datastore for credentials etc.    real one would use some database or whatever
+// approproiate depending  on number of clients and identification means
+func createMemoryStore() *storage.MemoryStore {
+	return &storage.MemoryStore{
+		IDSessions: make(map[string]fosite.Requester),
+		Clients: map[string]fosite.Client{
+			"my-client": &fosite.DefaultClient{
+				ID:            "my-client",
+				Secret:        []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`), // = "foobar"
+				RedirectURIs:  []string{"http://localhost:3846/callback"},
+				ResponseTypes: []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
+				GrantTypes:    []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
+				Scopes:        []string{"openid", "photos", "offline"},
+			},
+			"another-client": &fosite.DefaultClient{
+				ID:            "my-client",
+				Secret:        []byte(`$2a$10$IxMdI6d.LIRZPpSfEwNoeu4rY3FhDREsxFJXikcgdRRAStxUlsuEO`), // = "foobar"
+				RedirectURIs:  []string{"http://localhost:3846/callback"},
+				ResponseTypes: []string{"id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"},
+				GrantTypes:    []string{"implicit", "refresh_token", "authorization_code", "password", "client_credentials"},
+				Scopes:        []string{"openid", "glurge", "splurge"},
+			},
+		},
+		//  we do not ahve users for client credentials,   we have only clients
+		Users: map[string]storage.MemoryUserRelation{},
+		// as client credentials workflow is stateless,   we will not have much use for this
+		AuthorizeCodes:         map[string]storage.StoreAuthorizeCode{},
+		AccessTokens:           map[string]fosite.Requester{},
+		RefreshTokens:          map[string]fosite.Requester{},
+		PKCES:                  map[string]fosite.Requester{},
+		AccessTokenRequestIDs:  map[string]string{},
+		RefreshTokenRequestIDs: map[string]string{},
+		IssuerPublicKeys:       map[string]storage.IssuerPublicKeys{},
+	}
+}
+
 // Build a fosite instance with all OAuth2 and OpenID Connect handlers enabled, plugging in our configurations as specified above.
-var fosite = compose.Compose(
+var fositeInstance = compose.Compose(
 	config,
 	store,
 	&oauth2.DefaultJWTStrategy{

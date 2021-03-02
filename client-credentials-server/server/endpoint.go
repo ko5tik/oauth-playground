@@ -57,7 +57,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	mySessionData := newSession("")
 
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
-	accessRequest, err := fosite.NewAccessRequest(ctx, req, mySessionData)
+	accessRequest, err := fositeInstance.NewAccessRequest(ctx, req, mySessionData)
 
 	// Catch any errors, e.g.:
 	// * unknown client
@@ -65,7 +65,7 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 	// * ...
 	if err != nil {
 		log.Printf("Error occurred in NewAccessRequest: %+v", err)
-		fosite.WriteAccessError(rw, accessRequest, err)
+		fositeInstance.WriteAccessError(rw, accessRequest, err)
 		return
 	}
 
@@ -80,15 +80,15 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 
 	// Next we create a response for the access request. Again, we iterate through the TokenEndpointHandlers
 	// and aggregate the result in response.
-	response, err := fosite.NewAccessResponse(ctx, accessRequest)
+	response, err := fositeInstance.NewAccessResponse(ctx, accessRequest)
 	if err != nil {
 		log.Printf("Error occurred in NewAccessResponse: %+v", err)
-		fosite.WriteAccessError(rw, accessRequest, err)
+		fositeInstance.WriteAccessError(rw, accessRequest, err)
 		return
 	}
 
 	// All done, send the response.
-	fosite.WriteAccessResponse(rw, accessRequest, response)
+	fositeInstance.WriteAccessResponse(rw, accessRequest, response)
 
 }
 
@@ -96,12 +96,12 @@ func authEndpoint(rw http.ResponseWriter, req *http.Request) {
 func introspectionEndpoint(rw http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	mySessionData := newSession("")
-	ir, err := fosite.NewIntrospectionRequest(ctx, req, mySessionData)
+	ir, err := fositeInstance.NewIntrospectionRequest(ctx, req, mySessionData)
 	if err != nil {
 		log.Printf("Error occurred in NewIntrospectionRequest: %+v", err)
-		fosite.WriteIntrospectionError(rw, err)
+		fositeInstance.WriteIntrospectionError(rw, err)
 		return
 	}
 
-	fosite.WriteIntrospectionResponse(rw, ir)
+	fositeInstance.WriteIntrospectionResponse(rw, ir)
 }
