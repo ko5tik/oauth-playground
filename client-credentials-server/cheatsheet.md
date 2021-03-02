@@ -14,4 +14,4 @@ kubectl create -f deployment.yaml
 
 ````
 
-Now   __in this shell only__  docker will push images into kubernetes registry and everything shall work
+Now   **in this shell only**  docker will push images into kubernetes registry and everything shall work
