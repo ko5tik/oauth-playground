@@ -1,4 +1,4 @@
-POST http://localhost:3846/client
+POST http://192.168.49.2:30245/client
 Authorization: Basic my-client foobar
 Content-Type: application/x-www-form-urlencoded
 
