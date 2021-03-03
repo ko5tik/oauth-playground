@@ -1,8 +1,8 @@
 
-# Deploying to cuberenetes
+# Deploying to kuberenetes
 
 as kubernetes tries to pull docker images from public dockerhub ( we do not like to have it )
-we have toi push our image to local minikube registry
+we have to push our image to local minikube registry
 
   
 ````shell
